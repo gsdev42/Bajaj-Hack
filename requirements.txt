@@ -1,0 +1,7 @@
+langchain
+langchain-openai
+langchain-qdrant
+qdrant-client
+numpy
+python-dotenv
+argparse
