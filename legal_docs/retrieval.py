@@ -52,8 +52,8 @@ class QdrantRetrievalEngine:
         candidate_results = []
         for hit in candidates:
             case_doc = CaseDocument(
-                id=hit.id,
-                content=hit.payload["page_content"],
+                id=str(hit.id),
+                content=hit.payload.get("page_content",""),
                 vector=np.array(hit.vector),
                 metadata=hit.payload.get("metadata", {})
             )

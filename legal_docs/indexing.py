@@ -4,10 +4,11 @@ from .models import CaseDocument
 from .parser import parse_document
 import numpy as np
 from dotenv import load_dotenv
+from typing import List
 
 load_dotenv()
 
-def index_to_qdrant(url: str, collection_name: str = "legal_cases") -> bool:
+def index_to_qdrant(url: str, collection_name: str = "legal_cases") -> List[CaseDocument]:
     """Index document to Qdrant and return CaseDocuments"""
     try:
         # Parse document
