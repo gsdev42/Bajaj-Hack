@@ -1,5 +1,3 @@
-
-
 import argparse
 from legal_docs.indexing import index_to_qdrant
 from legal_docs.retrieval import QdrantRetrievalEngine
