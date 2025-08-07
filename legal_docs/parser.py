@@ -8,6 +8,8 @@ from io import BytesIO
 import fitz  # PyMuPDF
 from docx import Document as DocxDocument
 import mailparser
+from dotenv import load_dotenv
+load_dotenv()
 
 
 def fetch_file_from_url(url):

@@ -7,6 +7,8 @@ from langchain_openai import OpenAIEmbeddings
 from insight_generator import CaseInsightGenerator
 from legal_docs.models import RetrievalResult
 import uvicorn
+from dotenv import load_dotenv
+load_dotenv()
 
 app = FastAPI()
 

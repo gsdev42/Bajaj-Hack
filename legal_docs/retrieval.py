@@ -3,6 +3,10 @@ from qdrant_client.models import Filter, FieldCondition, MatchValue
 from .models import CaseDocument, RetrievalResult
 import numpy as np
 from typing import List, Optional
+from dotenv import load_dotenv
+import os
+load_dotenv()
+
 
 
 class QdrantRetrievalEngine:
@@ -10,10 +14,11 @@ class QdrantRetrievalEngine:
     
     def __init__(self, 
                  embedding_model,
-                 collection_name: str = "legal_cases",
-                 host: str = "localhost",
-                 port: int = 6333):
-        self.client = QdrantClient(host=host, port=port)
+                 collection_name: str = "legal_cases"):
+        self.client = QdrantClient(
+            url=os.getenv("QDRANT_URL"),
+            api_key=os.getenv("QDRANT_API_KEY")
+        )
         self.embedding_model = embedding_model
         self.collection_name = collection_name
     
