@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Dict, Any, List
 import numpy as np
+from dotenv import load_dotenv
+load_dotenv()
 
 @dataclass
 class CaseDocument:
