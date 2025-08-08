@@ -31,45 +31,71 @@ class CaseInsightGenerator:
         self.llm_initialized = bool(os.getenv("OPENAI_API_KEY"))
         self.token_counts = []  # For monitoring
         
-        self.prompt_templates = {
-            'analysis': """*Task*: Analyze legal cases to answer: "{query}"
-            
-            *Cases* (sorted by relevance):
-            {case_summaries}
-            
-            *Rules*:
-            1. Use ONLY case content - no external knowledge
-            2. Reference case IDs like [C001] where applicable
-            3. Maximum 75 words
-            
-            *Output*: Concise analysis""",
-            
-            'recommendation': """*Role*: Insurance/legal expert assistant
-            *Task*: Respond to query using ONLY the context below
-            
-            *Context*:
-            {case_summaries}
-            
-            *Query*: {query}
-            
-            *Output Format* (JSON ONLY):
-            {{
-                "response_type": "decision|info|procedure|contact",
-                "decision": "approved/rejected/N/A",
-                "amount": "₹.../Covered/N/A",
-                "answer": "1-sentence summary",
-                "detailed_explanation": ["bullet 1", "bullet 2"],
-                "referenced_clauses": ["Clause X.X"],
-                "next_steps": ["action 1"],
-                "baqis_score": 0-100
-            }}
-            
-            *Rules*:
-            1. Use ONLY context - if not found, use "N/A"
-            2. baqis_score = confidence (0-100)
-            3. MAX 5 bullet points
-            4. Strict JSON format - NO additional text"""
-        }
+self.prompt_templates = {
+    'analysis': """**Legal Analysis Request**: {query}
+    
+    **Relevant Cases** (Top 3):
+    {case_summaries}
+    
+    **Instructions**:
+    1. Provide concise analysis (max 100 words)
+    2. Reference case IDs like [C001]
+    3. Use ONLY case content
+    4. For missing information: State "Not explicitly stated" and make logical inferences using insurance domain knowledge""",
+    
+    'recommendation': """**Role**: Senior Insurance/Legal Consultant at BAJAJ
+    **Task**: Generate comprehensive JSON response for: "{query}"
+    
+    **Policy Context** (Top 3 documents):
+    {case_summaries}
+    
+    **Response Strategy**:
+    1. FIRST: Use exact matches from context
+    2. SECOND: If not found, make logical inferences based on:
+        - Standard insurance industry practices
+        - BAJAJ policy patterns
+        - Regulatory guidelines (IRDAI)
+    3. CLEARLY INDICATE inferred content with "(inferred)"
+    4. For completely unknown information: Use "Not specified"
+    
+    **Output Format** (Strict JSON):
+    {{
+        "response_type": "decision|info|procedure|contact",
+        "decision": "approved/rejected/Not specified",
+        "amount": "₹.../Covered/Not specified",
+        "answer": "1-sentence summary",
+        "detailed_explanation": [
+            "bullet 1 [source: Context/Inference]",
+            "bullet 2 [source: Context/Inference]"
+        ],
+        "referenced_clauses": ["Clause X.X"],
+        "next_steps": ["actionable items"],
+        "confidence_source": "Exact match/Partial match/Inference"
+    }}
+    
+    **Rules**:
+    1. MAX 3 bullet points in explanations
+    2. Tag sources: [Context] or [Inference]
+    3. confidence_source values:
+        - "Exact match": All info from context
+        - "Partial match": Mix of context and inference
+        - "Inference": All info logically extrapolated
+    4. Never fabricate specific numbers or clauses
+    
+    **Inference Examples**:
+    1. Context: "Grace period mentioned but not specified"
+       Acceptable: "Standard 30-day grace period (inferred)"
+    
+    2. Context: "Pre-existing conditions waiting period not stated"
+       Acceptable: "Typical 24-48 month waiting period (inferred)"
+    
+    3. Context: "No mention of maternity coverage"
+       Unacceptable: "Maternity covered at 100%"
+       Acceptable: "Not specified in documents" 
+    
+    **Query**: {query}
+    """
+}
 
     def generate(self, query: str, retrieved_cases: List[RetrievalResult], insight_type: str = "analysis") -> GeneratedInsight:
         if not self.llm_initialized:
