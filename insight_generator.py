@@ -31,6 +31,7 @@ class CaseInsightGenerator:
         self.llm_initialized = bool(os.getenv("OPENAI_API_KEY"))
         self.token_counts = []  # For monitoring
         
+
         self.prompt_templates = {
             'analysis': """*Task*: Analyze legal cases to answer: "{query}"
             
