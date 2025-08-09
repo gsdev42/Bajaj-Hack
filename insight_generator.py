@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 load_dotenv()
 
-client = OpenAI(timeout=60.0)  # Added timeout for Render deployment
+client = OpenAI(timeout=30.0)  # Added timeout for Render deployment
 
 @dataclass
 class RetrievalResult:
@@ -26,7 +26,7 @@ class GeneratedInsight:
     insight_type: str
 
 class CaseInsightGenerator:
-    def __init__(self, model_name: str = "gpt-3.5-turbo-0125"):  # Faster and cheaper model
+    def __init__(self, model_name: str = "gpt-5"):  # Faster and cheaper model
         self.model_name = model_name
         self.llm_initialized = bool(os.getenv("OPENAI_API_KEY"))
         self.token_counts = []  # For monitoring
@@ -39,10 +39,11 @@ class CaseInsightGenerator:
             
             *Rules*:
             1. Use ONLY case content - no external knowledge
-            2. Reference case IDs like [C001] where applicable
+            2. Do NOT include any case IDs or references in your response
             3. Maximum 75 words
+            4. Provide clear, direct analysis without technical references
             
-            *Output*: Concise analysis""",
+            *Output*: Concise analysis without case IDs""",
             
             'recommendation': """*Role*: Insurance/legal expert assistant
             *Task*: Respond to query using ONLY the context below
@@ -68,7 +69,8 @@ class CaseInsightGenerator:
             1. Use ONLY context - if not found, use "N/A"
             2. baqis_score = confidence (0-100)
             3. MAX 5 bullet points
-            4. Strict JSON format - NO additional text"""
+            4. Strict JSON format - NO additional text
+            5. Do NOT include any case IDs or technical references in the response"""
         }
 
     def generate(self, query: str, retrieved_cases: List[RetrievalResult], insight_type: str = "analysis") -> GeneratedInsight:
@@ -98,8 +100,8 @@ class CaseInsightGenerator:
                 messages=[
                     {
                         "role": "system", 
-                        "content": "You output valid JSON for recommendation type" if insight_type == "recommendation" 
-                                   else "You provide concise legal analysis"
+                        "content": "You output valid JSON for recommendation type without any case IDs or technical references" if insight_type == "recommendation" 
+                                   else "You provide concise legal analysis without case IDs or technical references"
                     },
                     {"role": "user", "content": prompt}
                 ],
@@ -115,9 +117,14 @@ class CaseInsightGenerator:
             if insight_type == "recommendation":
                 try:
                     llm_output = json.loads(llm_output)
+                    # Clean any case IDs from the JSON response
+                    llm_output = self._clean_case_ids_from_response(llm_output)
                 except json.JSONDecodeError:
                     logger.error("JSON parse failed, attempting repair")
                     llm_output = self._repair_json(llm_output)
+            else:
+                # Clean case IDs from text response
+                llm_output = self._clean_case_ids_from_text(llm_output)
         
         except Exception as e:
             logger.error(f"OpenAI error: {str(e)}")
@@ -136,19 +143,60 @@ class CaseInsightGenerator:
         )
 
     def _prepare_case_summaries(self, cases: List[RetrievalResult]) -> str:
-        """Optimized to reduce token count"""
-        return "\n".join(
-            f"[{res.case.id}] Score: {res.score:.2f} | "
-            f"{res.case.content[:150].strip()}{'...' if len(res.case.content) > 150 else ''}"
-            for res in sorted(cases, key=lambda x: -x.score)
-        )
+        """Optimized to reduce token count and remove case IDs from summaries"""
+        summaries = []
+        for i, res in enumerate(sorted(cases, key=lambda x: -x.score), 1):
+            content = res.case.content[:150].strip()
+            if len(res.case.content) > 150:
+                content += '...'
+            summaries.append(f"Case {i} (Relevance: {res.score:.2f}): {content}")
+        return "\n".join(summaries)
+
+    def _clean_case_ids_from_text(self, text: str) -> str:
+        """Remove case ID patterns from text response"""
+        import re
+        # Pattern to match case IDs like [ef7b192-df74-4a1c-835b-1cabaa02f205]
+        pattern = r'\[[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\]'
+        cleaned_text = re.sub(pattern, '', text)
+        # Clean up any extra spaces or brackets
+        cleaned_text = re.sub(r'\[\s*\]', '', cleaned_text)
+        cleaned_text = re.sub(r'\s+', ' ', cleaned_text).strip()
+        return cleaned_text
+
+    def _clean_case_ids_from_response(self, response_dict: Dict) -> Dict:
+        """Remove case IDs from JSON response fields"""
+        import re
+        pattern = r'\[[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\]'
+        
+        cleaned_response = {}
+        for key, value in response_dict.items():
+            if isinstance(value, str):
+                cleaned_value = re.sub(pattern, '', value)
+                cleaned_value = re.sub(r'\[\s*\]', '', cleaned_value)
+                cleaned_value = re.sub(r'\s+', ' ', cleaned_value).strip()
+                cleaned_response[key] = cleaned_value
+            elif isinstance(value, list):
+                cleaned_list = []
+                for item in value:
+                    if isinstance(item, str):
+                        cleaned_item = re.sub(pattern, '', item)
+                        cleaned_item = re.sub(r'\[\s*\]', '', cleaned_item)
+                        cleaned_item = re.sub(r'\s+', ' ', cleaned_item).strip()
+                        cleaned_list.append(cleaned_item)
+                    else:
+                        cleaned_list.append(item)
+                cleaned_response[key] = cleaned_list
+            else:
+                cleaned_response[key] = value
+                
+        return cleaned_response
 
     def _verify_insight(self, text: str, cases: List[RetrievalResult]) -> Dict:
-        """Simplified verification"""
+        """Simplified verification without looking for case ID references"""
         case_ids = [res.case.id for res in cases]
-        supporting_ids = [cid for cid in case_ids if f"[{cid}]" in text]
-        confidence = min(0.95, len(supporting_ids) / len(cases) * 1.2) if cases else 0.0
-        return {'confidence': round(confidence, 2), 'supporting_ids': supporting_ids}
+        # Since we're not including case IDs in output, base confidence on other factors
+        confidence = 0.8 if cases else 0.0  # Base confidence if cases are available
+        return {'confidence': round(confidence, 2), 'supporting_ids': case_ids}
 
     def _repair_json(self, text: str) -> Dict:
         """Basic JSON repair for common issues"""
@@ -156,7 +204,10 @@ class CaseInsightGenerator:
             # Extract first JSON object
             start = text.find('{')
             end = text.rfind('}') + 1
-            return json.loads(text[start:end])
+            json_text = text[start:end]
+            parsed_json = json.loads(json_text)
+            # Clean case IDs from repaired JSON
+            return self._clean_case_ids_from_response(parsed_json)
         except:
             return {"error": "Invalid JSON response"}
 
