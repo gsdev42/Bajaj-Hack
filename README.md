@@ -1,7 +1,7 @@
 # 🚀 **DocuMind AI**  
 ### *Intelligent Document Insights Engine*  
 
-![DocuMind AI Banner](docs/banner.jpg) *Replace with your project banner image*  
+![](https://github.com/gsdev42/Bajaj-Hack/blob/bec9e69f15270b038c6d8771fc73cfaddae78689/DocuMind%20AI.png)
 
 > **"From pages to precision – transforming documents into decisions."**  
 > An AI-powered system that extracts actionable insights from complex legal, insurance, and compliance documents.  
