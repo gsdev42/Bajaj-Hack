@@ -16,15 +16,16 @@
 - **Seamless integration** – API-ready for enterprise workflow integration  
 
 ---
+## 🔑  **Component Specifications**  
 
-## 🏆 **Key Features**  
 
-| **Feature** | **Tech Innovation** | **Business Value** |
-|-------------|----------------------|-------------------|
-| **Document Intelligence** |  Qdrant Vector Search | 95% accuracy in clause extraction |
-| **Adaptive Reasoning** | Hybrid Retrieval-Augmented Generation | Handles incomplete documents with logical extrapolation |
-| **Decision Support** | Structured JSON Output Engine | Reduces claim processing time||
-| **Explainable** | Case Reference Tracking | Full transparency for compliance |
+| Component        | Technology           | Key Features                                                     |
+|---------------------|----------------------|------------------------------------------------------------------|
+| Query Processing    | GPT-3/BERT LLMs      | Semantic tokenization, Vector encoding (Algorithm 1)            |
+| Dense Vector Index  | BERT Architecture    | 768-1024 dim vectors, HNSW indexing, Dynamic updates             |
+| Retrieval Engine    | FAISS + MMR          | Cosine similarity, Domain-aware ranking (Algorithm 2)            |
+| Insight Generation  | Gemini/Open AI     | Context aggregation, Conditional text generation (Algorithm 3)  |
+
 
 ---
 
@@ -85,16 +86,60 @@ print(response.json())
 ---
 
 ## 🧠 **Architecture**  
-```mermaid
-graph LR
-    A[Document Upload] --> B(Qdrant Vector DB)
-    B --> C[Semantic Search]
-    C --> D{Top 3 Relevant Sections}
-    D --> E[Gemini AI Analysis]
-    E --> F[JSON Insight Generation]
-    F --> G[Decision Support Dashboard]
-```
+``````mermaid
+graph TD
+    A[User Query] --> B(Query Processing Module)
+    B --> C[LLM Tokenization & Encoding]
+    C --> D[Query Vector]
+    D --> E{Case Retrieval Engine}
+    
+    F[Case Documents] --> G[BERT Vectorization]
+    G --> H[Dense Vector Index]
+    H --> E
+    
+    E --> I[HNSW Index Structure]
+    I --> J[FAISS Similarity Search]
+    J --> K[MMR Diversification]
+    K --> L[Top-k Relevant Cases]
+    
+    L --> M(Insight Generation Module)
+    M --> N[Context Aggregation]
+    N --> O[LLM Analysis]
+    O --> P[JSON Insights]
+    
+    P --> Q[Decision Support Dashboard]
+    Q --> R[Medical Diagnosis]
+    Q --> S[Legal Precedents]
+    
+    subgraph Data Pipeline
+        F --> G --> H
+    end
+    
+    subgraph Core Engine
+        B --> E --> M
+    end
+    
+    subgraph Output
+        Q
+    end
+``````
 
+---
+## 🧠 **Sequence Diagram**  
+
+ ``````mermaid
+sequenceDiagram
+    User->>Query Processing: Submit natural language query
+    Query Processing->>Retrieval Engine: Encoded vector
+    Retrieval Engine->>Dense Vector Index: Similarity search
+    Dense Vector Index-->>Retrieval Engine: Top 100 candidates
+    Retrieval Engine->>Retrieval Engine: MMR diversification
+    Retrieval Engine->>Insight Generation: Top-k cases + query
+    Insight Generation->>LLM: Context aggregation
+    LLM-->>Insight Generation: Analytical insights
+    Insight Generation->>Dashboard: Structured JSON output
+    Dashboard->>User: Decision support visualization
+``````
 ---
 
 ## 🌐 **Deployment**  
@@ -111,7 +156,7 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
 ```
 
 ### Cloud Deployment  
-[![Deploy on Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)  
-[![Deploy on AWS](docs/aws-deploy-badge.png)](https://aws.amazon.com) *Add actual AWS badge*  
+[![Deployed on Render](https://render.com/images/deploy-to-render-button.svg)]([https://render.com/deploy](https://bajaj-hack-gydf.onrender.com))  
+
 
 ---
