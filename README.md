@@ -23,7 +23,7 @@
 |---------------------|----------------------|------------------------------------------------------------------|
 | Query Processing    | GPT-3/BERT LLMs      | Semantic tokenization, Vector encoding (Algorithm 1)            |
 | Dense Vector Index  | BERT Architecture    | 768-1024 dim vectors, HNSW indexing, Dynamic updates             |
-| Retrieval Engine    | FAISS + MMR          | Cosine similarity, Domain-aware ranking (Algorithm 2)            |
+| Retrieval Engine    | Qdrant + MMR          | Cosine similarity, Domain-aware ranking (Algorithm 2)            |
 | Insight Generation  | Gemini/Open AI     | Context aggregation, Conditional text generation (Algorithm 3)  |
 
 
@@ -98,7 +98,7 @@ graph TD
     H --> E
     
     E --> I[HNSW Index Structure]
-    I --> J[FAISS Similarity Search]
+    I --> J[ Similarity Search]
     J --> K[MMR Diversification]
     K --> L[Top-k Relevant Cases]
     
