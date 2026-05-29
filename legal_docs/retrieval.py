@@ -7,11 +7,7 @@ from dotenv import load_dotenv
 import os
 load_dotenv()
 
-
-
 class QdrantRetrievalEngine:
-    """Retrieval engine using Qdrant with MMR diversification"""
-    
     def __init__(self, 
                  embedding_model,
                  collection_name: str = "legal_cases"):
@@ -27,13 +23,8 @@ class QdrantRetrievalEngine:
                       k: int = 5,
                       diversity: float = 0.7,
                       source_filter: Optional[str] = None) -> List[RetrievalResult]:
-        """
-        Retrieve top-k cases using MMR diversification
-        """
-        # Embed the query
         query_vector = self.embedding_model.embed_query(query)
         
-        # Build filter if needed
         qdrant_filter = None
         if source_filter:
             qdrant_filter = Filter(
@@ -43,7 +34,6 @@ class QdrantRetrievalEngine:
                 )]
             )
         
-        # First-stage retrieval: Get top 100 candidates
         candidates = self.client.search(
             collection_name=self.collection_name,
             query_vector=query_vector,
@@ -52,8 +42,6 @@ class QdrantRetrievalEngine:
             with_payload=True,
             with_vectors=True
         )
-        
-        # Convert to RetrievalResult objects
         candidate_results = []
         for hit in candidates:
             case_doc = CaseDocument(
@@ -66,7 +54,6 @@ class QdrantRetrievalEngine:
                 RetrievalResult(case=case_doc, score=hit.score)
             )
         
-        # Apply MMR diversification
         return self._apply_mmr(candidate_results, query_vector, k, diversity)
     
     def _apply_mmr(self, 
@@ -74,11 +61,9 @@ class QdrantRetrievalEngine:
                   query_vector: np.ndarray,
                   k: int,
                   diversity: float) -> List[RetrievalResult]:
-        """Apply Maximal Marginal Relevance diversification"""
         results = []
         selected_vectors = []
         
-        # Normalize query vector
         query_norm = np.linalg.norm(query_vector)
         if query_norm > 0:
             query_vector = query_vector / query_norm
@@ -91,22 +76,18 @@ class QdrantRetrievalEngine:
             best_idx = -1
 
             for idx, candidate in enumerate(candidates):
-                # Normalize candidate vector
                 candidate_vector = candidate.case.vector
                 candidate_norm = np.linalg.norm(candidate_vector)
                 if candidate_norm > 0:
                     candidate_vector = candidate_vector / candidate_norm
                 
-                # Relevance to query
                 rel_score = np.dot(candidate_vector, query_vector)
 
-                # Diversity penalty
                 div_penalty = 0
                 if selected_vectors:
                     similarities = np.dot(selected_vectors, candidate_vector)
                     div_penalty = np.max(similarities)
 
-                # MMR scoring
                 mmr_score = diversity * rel_score - (1 - diversity) * div_penalty
 
                 if mmr_score > best_score:
@@ -119,7 +100,6 @@ class QdrantRetrievalEngine:
                 best.score = best_score
                 results.append(best)
                 
-                # Store normalized vector for diversity comparison
                 selected_vectors.append(best.case.vector / np.linalg.norm(best.case.vector))
 
         return results
